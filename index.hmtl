@@ -1,1 +1,81 @@
-# Scorebord
+<!DOCTYPE html><html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scorebord</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 10px; }
+    h1, h2 { text-align: center; }
+    .hidden { display: none; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+    input, button { width: 100%; padding: 10px; font-size: 16px; margin-top: 8px; }
+    button { background: #007bff; color: white; border: none; border-radius: 6px; }
+    button.stop { background: #dc3545; }
+  </style>
+</head>
+<body><h1>Scorebord</h1><div id="setup" class="card">
+  <h2>Spelers</h2>
+  <input id="playerNames" placeholder="Namen gescheiden door komma's" />
+  <button onclick="startGame()">Start spel</button>
+</div><div id="game" class="card hidden">
+  <h2 id="currentPlayer"></h2>
+  <p id="currentTotal"></p>
+  <input id="scoreInput" type="number" min="0" max="43" placeholder="Score (0-43)" />
+  <button onclick="submitScore()">Beurt opslaan</button>
+  <button class="stop" onclick="endGame()">Stop spel</button>
+</div><div id="results" class="card hidden">
+  <h2>Eindstand</h2>
+  <div id="resultsList"></div>
+</div><script>
+let players = [];
+let currentIndex = 0;
+let stats = JSON.parse(localStorage.getItem('stats') || '{}');
+
+function startGame() {
+  const names = document.getElementById('playerNames').value.split(',').map(n => n.trim()).filter(n => n);
+  players = names.map(name => ({ name, scores: [], total: 0 }));
+  players.forEach(p => {
+    if (!stats[p.name]) stats[p.name] = { games: 0, turns: 0, totalScore: 0, bestTurn: 43 };
+  });
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  updateView();
+}
+
+function updateView() {
+  const p = players[currentIndex];
+  document.getElementById('currentPlayer').innerText = p.name;
+  document.getElementById('currentTotal').innerText = 'Totaalscore: ' + p.total;
+  document.getElementById('scoreInput').value = '';
+}
+
+function submitScore() {
+  const val = parseInt(document.getElementById('scoreInput').value);
+  if (isNaN(val) || val < 0 || val > 43) return alert('Ongeldige score');
+  const p = players[currentIndex];
+  p.scores.push(val);
+  p.total += val;
+
+  stats[p.name].turns++;
+  stats[p.name].totalScore += val;
+  if (val < stats[p.name].bestTurn) stats[p.name].bestTurn = val;
+
+  currentIndex = (currentIndex + 1) % players.length;
+  updateView();
+}
+
+function endGame() {
+  players.forEach(p => stats[p.name].games++);
+  localStorage.setItem('stats', JSON.stringify(stats));
+  document.getElementById('game').classList.add('hidden');
+  document.getElementById('results').classList.remove('hidden');
+
+  const list = document.getElementById('resultsList');
+  list.innerHTML = '';
+  players.forEach(p => {
+    const avg = (p.scores.reduce((a,b)=>a+b,0) / p.scores.length || 0).toFixed(2);
+    list.innerHTML += `<p><strong>${p.name}</strong><br>Totaal: ${p.total}<br>Gemiddelde beurt: ${avg}</p>`;
+  });
+}
+</script></body>
+</html># Scorebord
